@@ -1,3 +1,5 @@
 /env
-/Notebooks/_pycache_
+/Notebooks/__pycache__
 /Notebooks/games.json
+/Notebooks/games_cleaned.json
+/Data/games.json
