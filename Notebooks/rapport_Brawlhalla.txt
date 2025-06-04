@@ -1,0 +1,37 @@
+### Analyse des avis pour le jeu « Brawlhalla »
+
+#### 1. Sentiment général pour chaque avis (positif, neutre, négatif)
+
+- **Positif** : Les avis positifs soulignent souvent la nature addictive du jeu, l'accessibilité pour les nouveaux joueurs, et la possibilité de jouer avec des amis. Certains joueurs apprécient les mises à jour fréquentes et la variété des personnages et des armes.
+- **Neutre** : Les avis neutres sont rares mais mentionnent souvent des aspects du jeu qui sont à la fois positifs et négatifs, comme le fait que le jeu peut être amusant mais aussi frustrant.
+- **Négatif** : Les avis négatifs se concentrent principalement sur la toxicité de la communauté, les problèmes de gameplay comme la méta passive, les déséquilibres entre les personnages, et les effets négatifs sur la santé mentale des joueurs.
+
+#### 2. Avis général sur le jeu
+
+Le jeu « Brawlhalla » reçoit des avis très polarisés. Les joueurs apprécient généralement son accessibilité et son caractère addictif, mais beaucoup critiquent la toxicité de la communauté et les problèmes de méta, notamment la passivité excessive dans les matchs compétitifs. Le jeu semble être particulièrement apprécié pour des sessions de jeu occasionnelles avec des amis, mais il est souvent déconseillé pour ceux qui cherchent une expérience compétitive équilibrée.
+
+#### 3. Points forts et points faibles mentionnés
+
+**Points forts :**
+- **Accessibilité** : Le jeu est facile à prendre en main et à jouer, ce qui le rend attrayant pour les nouveaux joueurs.
+- **Variété des personnages et des armes** : La diversité des personnages et des armes offre une grande rejouabilité.
+- **Mises à jour fréquentes** : Les développeurs mettent régulièrement à jour le jeu, ajoutant de nouveaux contenus et équilibrant les personnages.
+- **Mode bots et jouabilité en solo** : La possibilité de jouer contre des bots et de s'entraîner en solo est appréciée.
+- **Amusement avec des amis** : Le jeu est souvent décrit comme très amusant lorsqu'il est joué avec des amis.
+
+**Points faibles :**
+- **Toxicité de la communauté** : De nombreux joueurs se plaignent de la toxicité et de l'agressivité des autres joueurs.
+- **Méta passive** : La méta du jeu, notamment en compétitif, est souvent critiquée pour être trop passive et peu engageante.
+- **Déséquilibres entre les personnages** : Certains personnages et armes sont perçus comme trop puissants ou trop faibles, ce qui peut rendre les matchs injustes.
+- **Effets négatifs sur la santé mentale** : Beaucoup de joueurs mentionnent que le jeu peut provoquer de la frustration, de la colère, et même des symptômes de dépression.
+- **Problèmes de matchmaking** : Le système de matchmaking est parfois critiqué pour des appariements déséquilibrés.
+
+#### 4. Que faut-il améliorer selon les joueurs ?
+
+- **Réduire la toxicité de la communauté** : Les joueurs souhaitent des mesures pour réduire la toxicité et encourager un comportement plus positif.
+- **Équilibrer la méta** : Il est nécessaire de rendre la méta plus engageante et moins passive, notamment en compétitif.
+- **Améliorer le matchmaking** : Un meilleur système de matchmaking pour des appariements plus équilibrés.
+- **Équilibrer les personnages et les armes** : Les joueurs demandent des ajustements pour rendre les personnages et les armes plus équilibrés.
+- **Améliorer la communication des développeurs** : Certains joueurs souhaitent que les développeurs soient plus à l'écoute de la communauté et prennent en compte leurs retours pour améliorer le jeu.
+
+En résumé, « Brawlhalla » est un jeu apprécié pour son accessibilité et son potentiel addictif, mais il souffre de problèmes de toxicité, de méta passive, et de déséquilibres qui peuvent rendre l'expérience de jeu frustrante, surtout en mode compétitif. Les joueurs recommandent souvent de jouer avec des amis pour une expérience plus agréable.

@@ -4,7 +4,8 @@ import time
 import streamlit as st
 from mistralai import Mistral
 import smtplib
-from email.message import EmailMessage
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import pandas as pd
 import plotly.express as px
 
@@ -18,19 +19,17 @@ game_logos = [
     "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/291550/71448f1f413d5aac25b8dd08068f0f284f7bacf7/header.jpg?t=1747253897",
     "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/485510/header.jpg?t=1737983043",
     "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/230410/73f2628439b0f5e28bf9398405a78f8d5dedd73b/header.jpg?t=1748645305",
-    "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/381210/header.jpg?t=1746584187"
+    "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/381210/header.jpg?t=1746584187",
 ]
 
 # Chargement JSON
 def load_games_data():
     with open("games.json", "r", encoding="utf-8") as f:
         return json.load(f)
-    with open("games_cleaned.json", "r", encoding="utf-8") as f:
-        return json.load(f)
 
 # Appel API
 def analyze_comments(selected_comments, game_name):
-    start_time = time.time() 
+    start_time = time.time()
     prompt = (
         f"Analyse les avis suivants pour le jeu « {game_name} » et génère une synthèse :\n"
         "1. Quel est le sentiment général pour chaque avis (positif, neutre, négatif) ?\n"
@@ -45,28 +44,53 @@ def analyze_comments(selected_comments, game_name):
     chat_response = client.chat.complete(model=model, messages=message)
     end_time = time.time()
     elapsed_time = end_time - start_time
-    st.write(f"Temps d'analyse : {elapsed_time:.2f} secondes pour {len(selected_comments)} avis.") 
+    st.write(f"Temps d'analyse : {elapsed_time:.2f} secondes pour {len(selected_comments)} avis.")
     return chat_response.choices[0].message.content
 
 # Envoi Email
 def send_email(receiver_email, file_path, game_title):
-    sender_email = "ton_email@gmail.com"
-    sender_password = "mot_de_passe_app"
-    msg = EmailMessage()
-    msg["Subject"] = f"Rapport d'analyse - {game_title}"
+    sender_email = "yvenlycee@gmail.com"
+    sender_password = "stsuvlpolprhvsbm"
+
+    # Créer l'email
+    msg = MIMEMultipart()
     msg["From"] = sender_email
     msg["To"] = receiver_email
-    msg.set_content(f"Bonjour,\n\nVeuillez trouver ci-joint le rapport d'analyse du jeu « {game_title} ».\n\nCordialement.")
-    with open(file_path, "rb") as f:
-        msg.add_attachment(f.read(), maintype="text", subtype="plain", filename=os.path.basename(file_path))
+    msg["Subject"] = f"Rapport d'analyse - {game_title}"
+
+    # Corps du message
+    body = f"""Bonjour,
+
+Veuillez trouver ci-joint le rapport d'analyse du jeu « {game_title} ».
+
+Cordialement.
+"""
+    msg.attach(MIMEText(body, "plain"))
+
+    # Joindre le fichier
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(sender_email, sender_password)
-            smtp.send_message(msg)
+        with open(file_path, "r", encoding="utf-8") as f:
+            attachment = MIMEText(f.read(), _subtype="plain")
+            attachment.add_header(
+                "Content-Disposition",
+                "attachment",
+                filename=os.path.basename(file_path)
+            )
+            msg.attach(attachment)
+    except Exception as e:
+        st.error(f"Erreur lors de la lecture du fichier à joindre : {e}")
+        return False
+
+    # Envoi via SMTP Gmail
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as serveur:
+            serveur.login(sender_email, sender_password)
+            serveur.send_message(msg)
         return True
     except Exception as e:
-        st.error(f"Erreur lors de l'envoi : {e}")
+        st.error(f"Erreur lors de l'envoi de l'email : {e}")
         return False
+
 
 # Page setup et style
 st.set_page_config(page_title="Analyse Jeux Steam", layout="wide")
@@ -147,7 +171,45 @@ if "selected_game" in st.session_state:
     if not comments:
         st.warning("Aucun commentaire disponible pour ce jeu.")
     else:
-        n_comments = st.slider("Nombre d'avis à analyser :", 1, len(comments), min(5, len(comments)))
+        # Utilisation de st.number_input pour choisir le nombre d'avis
+        n_comments_input = st.number_input(
+            "Nombre d'avis à analyser :",
+            min_value=1,
+            max_value=len(comments),
+            value=min(5, len(comments)),
+            key="n_comments_input"
+        )
+
+        # Mise à jour dynamique du slider
+        if 'n_comments' not in st.session_state:
+            st.session_state.n_comments = n_comments_input
+
+        n_comments = st.slider(
+            "Ajustez le nombre d'avis à analyser :",
+            1,
+            len(comments),
+            st.session_state.n_comments,
+            key="n_comments_slider"
+        )
+
+        # JavaScript pour mettre à jour le slider lorsque l'utilisateur appuie sur Entrée
+        st.components.v1.html("""
+            <script>
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    const input = document.querySelector('input[value=""" + str(n_comments_input) + """]');
+                    if (input) {
+                        const event = new Event('change');
+                        input.dispatchEvent(event);
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 100);
+                    }
+                }
+            });
+            </script>
+        """)
+
         if st.button("Lancer l'analyse des sentiments"):
             selected_comments = comments[:n_comments]
             with st.spinner("Génération du rapport en cours..."):
@@ -167,8 +229,6 @@ if "selected_game" in st.session_state:
                         with st.spinner("Envoi en cours..."):
                             if send_email(receiver_email, file_name, selected_game):
                                 st.success("✅ Email envoyé avec succès !")
-# Import des bibliothèques nécessaires
-
 
 # --- Charger les données nettoyées ---
 @st.cache_data
@@ -179,11 +239,11 @@ def load_cleaned_data():
 # --- Section Dashboard toujours visible ---
 st.markdown("## 📊 Dashboard Statistiques & Graphiques")
 cleaned_data = load_cleaned_data()
-cleaned_game_names = list(cleaned_data.keys())
 
-selected_game_dash = st.selectbox("🎮 Choisir un jeu pour dashboard :", cleaned_game_names)
+# Récupérer automatiquement le même jeu sélectionné
+selected_game_dash = st.session_state.get("selected_game")
 
-if selected_game_dash:
+if selected_game_dash and selected_game_dash in cleaned_data:
     data = cleaned_data[selected_game_dash]
     df = pd.DataFrame(data)
 
@@ -192,7 +252,7 @@ if selected_game_dash:
     df["Hours Played"] = pd.to_numeric(df["Hours Played"], errors="coerce")
     df["Date Posted"] = pd.to_datetime(df["Date Posted"], errors="coerce")
 
-    st.markdown(f"### Jeu sélectionné : **{selected_game_dash}**")
+    st.markdown(f"### Jeu sélectionné pour le dashboard : **{selected_game_dash}**")
 
     # Statistiques globales
     st.write(f"- Nombre d'avis total : {len(df)}")
@@ -223,8 +283,34 @@ if selected_game_dash:
                        title="Nombre d'avis postés au fil du temps")
     st.plotly_chart(fig_time, use_container_width=True)
 
-    # Commentaires récents
-    with st.expander("🗨️ Voir quelques commentaires récents"):
+    # 🗨️ Commentaires récents
+    with st.expander("Voir quelques commentaires récents"):
         for c in df_sorted.sort_values("Date Posted", ascending=False)["Comment"].head(10):
             if c.strip():
                 st.write("- ", c)
+
+    # 🧠 Informations sur le modèle
+    with st.expander("Informations sur le modèle"):
+        st.markdown("""
+        - **Modèle utilisé** : `mistral-large-2411`
+        - **API provider** : [Mistral AI](https://mistral.ai)
+        - **Utilisation** : Analyse de sentiment sur les commentaires des utilisateurs
+        - **Objectif** : Identifier sentiments, points positifs/négatifs, et suggestions d'amélioration.
+        """)
+
+    # ℹ️ À propos de l'application
+    with st.expander("À propos de"):
+        st.markdown("""
+        Cette application a été développée pour analyser les avis Steam de jeux vidéo à l’aide d’un modèle LLM.
+        
+        **Fonctionnalités principales :**
+        - Analyse sémantique des avis
+        - Génération de rapport synthétique
+        - Envoi du rapport par email
+        - Visualisation de statistiques et graphiques dynamiques
+
+        👨‍💻 *Développé avec amour par un passionné de data & IA.*
+        """)
+else:
+    st.info("Veuillez sélectionner un jeu pour afficher les statistiques.")
+
