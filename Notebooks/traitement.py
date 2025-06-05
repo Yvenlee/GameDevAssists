@@ -49,7 +49,7 @@ def clean_games_data(input_path="C:/Users/yvenl/OneDrive/Bureau/GameDevAssists/D
         for rev in reviews:
             recommended = clean_recommended(rev.get("Recommended"))
             if recommended is None:
-                continue  # ignorer les avis ambigus
+                continue
             hours_played = parse_hours_played(rev.get("Hours Played"))
             date_posted = parse_date_posted(rev.get("Date Posted"))
             comment = rev.get("Comment", "").strip()

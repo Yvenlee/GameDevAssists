@@ -26,6 +26,31 @@ def click_first_game(driver):
     )
     first_image.click()
 
+def extract_image_url(driver):
+    try:
+        image_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div#gameHeaderImageCtn img.game_header_image_full"))
+        )
+        image_url = image_element.get_attribute("src")
+
+        image_urls_file = r"C:\Users\yvenl\OneDrive\Bureau\GameDevAssists\Data\image_urls.json"
+
+        image_urls = []
+        try:
+            with open(image_urls_file, "r") as file:
+                image_urls = json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            image_urls = []
+
+        image_urls.append(image_url)
+
+        with open(image_urls_file, "w") as file:
+            json.dump(image_urls, file, indent=4)
+
+        print(f"Image URL saved: {image_url}")
+    except Exception as e:
+        print(f"Error extracting image URL: {e}")
+
 def click_user_review(driver):
     try:
         review_links = WebDriverWait(driver, 10).until(
@@ -67,9 +92,9 @@ def click_browse_reviews(driver):
         driver.execute_script("arguments[0].querySelector('a').click();", browse_reviews_div)
         print("Cliqué sur le lien 'Parcourir les évaluations' avec JavaScript.")
     except TimeoutException:
-        print("❌ Impossible de trouver la div 'ViewAllReviewssummary'.")
+        print("Impossible de trouver la div 'ViewAllReviewssummary'.")
     except Exception as e:
-        print(f"❌ Une erreur est survenue lors du clic sur le lien : {e}")
+        print(f"Une erreur est survenue lors du clic sur le lien : {e}")
 
 def extract_reviews(driver, game_name, remaining_limit):
     extracted_count = 0
@@ -134,7 +159,7 @@ def save_json():
     with open(json_file, 'w', encoding='utf-8') as f:
         json.dump(reviews_data, f, ensure_ascii=False, indent=4)
 
-json_file = r"C:\Users\yvenl\OneDrive\Bureau\GameDevAssists\Notebooks\games.json"
+json_file = r"C:\Users\yvenl\OneDrive\Bureau\GameDevAssists\Data\games.json"
 
 if os.path.exists(json_file):
     with open(json_file, "r", encoding="utf-8") as f:
@@ -156,6 +181,7 @@ def main(game_name):
         driver.get("https://store.steampowered.com/")
         search_game(driver, game_name)
         click_first_game(driver)
+        extract_image_url(driver)
         click_user_review(driver)
         click_browse_reviews(driver)
 
@@ -167,6 +193,5 @@ def main(game_name):
     except Exception as e:
         print(f"Une erreur est survenue : {e}")
 
-# Exemple d'utilisation dans le notebook
 game_name = input("Veuillez entrer le nom du jeu : ")
 main(game_name)
