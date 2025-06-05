@@ -20,6 +20,7 @@ game_logos = [
     "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/485510/header.jpg?t=1737983043",
     "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/230410/73f2628439b0f5e28bf9398405a78f8d5dedd73b/header.jpg?t=1748645305",
     "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/381210/header.jpg?t=1746584187",
+    "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/588650/header.jpg?t=1747319767"
 ]
 
 # Chargement JSON
