@@ -8,6 +8,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import pandas as pd
 import plotly.express as px
+import difflib
 
 # Configuration API Mistral
 api_key = "Hs0BhW1vJsSKYV41n7QNkFiZNOnTAjcQ"
@@ -161,7 +162,16 @@ game_names = list(games_data.keys())
 
 search_game = st.text_input("", placeholder="Cherchez votre jeu ici...").strip()
 if search_game:
-    st.session_state["selected_game"] = search_game
+    game_names_lower = [name.lower() for name in game_names]
+    matches = difflib.get_close_matches(search_game.lower(), game_names_lower, n=1, cutoff=0.6)
+    
+    if matches:
+        matched_index = game_names_lower.index(matches[0])
+        matched_game = game_names[matched_index]
+        st.session_state["selected_game"] = matched_game
+        st.success(f"🎯 Jeu trouvé : **{matched_game}** (à partir de \"{search_game}\")")
+    else:
+        st.warning("❌ Aucun jeu correspondant trouvé. Essayez un autre nom ou corrigez l’orthographe.")
 
 if not search_game:
     st.markdown("### Choisis un jeu à analyser :")
