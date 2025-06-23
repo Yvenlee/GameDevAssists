@@ -2,10 +2,26 @@ import json
 import re
 from datetime import datetime
 
+# Pour conversion des mois français
+FRENCH_MONTHS = {
+    "janvier": "January",
+    "février": "February",
+    "mars": "March",
+    "avril": "April",
+    "mai": "May",
+    "juin": "June",
+    "juillet": "July",
+    "août": "August",
+    "septembre": "September",
+    "octobre": "October",
+    "novembre": "November",
+    "décembre": "December",
+}
+
 def parse_hours_played(hours_str):
     if not isinstance(hours_str, str):
         return None
-    match = re.search(r"([\d,\.]+)\s*hrs", hours_str)
+    match = re.search(r"([\d,\.]+)\s*(hrs|h)", hours_str)
     if match:
         num_str = match.group(1).replace(",", "")
         try:
@@ -14,11 +30,28 @@ def parse_hours_played(hours_str):
             return None
     return None
 
+def translate_french_date_to_english(date_str):
+    # Remplace les mois français par leur équivalent anglais
+    for fr, en in FRENCH_MONTHS.items():
+        date_str = re.sub(fr, en, date_str, flags=re.IGNORECASE)
+    return date_str
+
 def parse_date_posted(date_str):
     if not isinstance(date_str, str):
         return None
-    date_part = date_str.replace("Posted:", "").strip()
-    for fmt in ("%d %B, %Y", "%B %d, %Y"):
+
+    # Nettoyer le préfixe
+    date_str = date_str.strip()
+    if date_str.lower().startswith("posted:"):
+        date_part = date_str.replace("Posted:", "").strip()
+    elif "Évaluation publiée le" in date_str:
+        date_part = date_str.replace("Évaluation publiée le", "").strip()
+        date_part = translate_french_date_to_english(date_part)
+    else:
+        return None
+
+    # Essayer plusieurs formats
+    for fmt in ("%B %d, %Y", "%d %B %Y", "%d %B, %Y"):
         try:
             dt = datetime.strptime(date_part, fmt)
             return dt.strftime("%Y-%m-%d")
@@ -26,14 +59,13 @@ def parse_date_posted(date_str):
             continue
     return None
 
-
 def clean_recommended(rec_str):
     if not isinstance(rec_str, str):
         return None
     rec_str = rec_str.strip().lower()
-    if rec_str == "recommended":
+    if rec_str in ["recommended", "recommandé"]:
         return 1
-    elif rec_str == "not recommended":
+    elif rec_str in ["not recommended", "non recommandé"]:
         return 0
     else:
         return None
