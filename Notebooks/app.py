@@ -11,13 +11,13 @@ import plotly.express as px
 import difflib
 
 # Configuration API Mistral
-api_key = "Hs0BhW1vJsSKYV41n7QNkFiZNOnTAjcQ"
+api_key = "cfseJTWU46kQZLNokDUYE79JYQmxkb4T"
 model = "mistral-large-2411"
 client = Mistral(api_key=api_key)
 st.set_page_config(page_title="Analyse Jeux Steam", layout="wide")
 
 def load_image_urls():
-    file_path = os.path.join("C:\\Users\\yvenl\\OneDrive\\Bureau\\GameDevAssists\\Data", "image_urls.json")
+    file_path = os.path.join("..\Data\image_urls.json")
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -27,7 +27,7 @@ def load_image_urls():
 game_logos = load_image_urls()
 
 def load_games_data():
-    file_path = os.path.join("C:\\Users\\yvenl\\OneDrive\\Bureau\\GameDevAssists\\Data", "games.json")
+    file_path = os.path.join("..\Data\games.json")
     with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -81,18 +81,40 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-def incremental_text_display(text, delay=0.02):
+def incremental_text_display(text, delay=0.8):
     text_display = st.empty()
     full_response = ""
     sections = text.split('\n\n')
+
+    # Début du bloc scrollable stylisé
+    full_response += """
+    <div style="
+        background-color: #1f1f1f;
+        border: 2px solid #1DB954;
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 20px;
+        margin-bottom: 30px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: 'Arial', sans-serif;
+        font-size: 1em;
+        line-height: 1.6;
+        color: #ffffff;
+    ">
+    """
+
     for section in sections:
         if section.startswith("## "):
             full_response += f'<p class="section-title">{section}</p>'
         else:
-            full_response += section + '\n\n'
+            full_response += section + '<br><br>'
         time.sleep(delay)
-        text_display.markdown(f'<div class="incremental-text">{full_response}▌</div>', unsafe_allow_html=True)
-    text_display.markdown(f'<div class="incremental-text">{full_response}</div>', unsafe_allow_html=True)
+        text_display.markdown(f'{full_response}▌</div>', unsafe_allow_html=True)
+
+    # Fin du bloc sans curseur
+    text_display.markdown(f'{full_response}</div>', unsafe_allow_html=True)
+
 
 def analyze_comments(selected_comments, game_name):
     start_time = time.time()
@@ -193,7 +215,7 @@ if not search_game:
             if st.button(f"🟢 Sélectionner", key=f"select_{i}"):
                 st.session_state["selected_game"] = paginated_games[i]
 
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns([3, 16, 1])
     with col1:
         if st.button("Précédent") and st.session_state.page > 0:
             st.session_state.page -= 1
@@ -275,7 +297,7 @@ if "selected_game" in st.session_state:
 
 @st.cache_data
 def load_cleaned_data():
-    file_path = os.path.join("C:\\Users\\yvenl\\OneDrive\\Bureau\\GameDevAssists\\Data", "games_cleaned.json")
+    file_path = os.path.join("..\Data\games_cleaned.json")
     with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
