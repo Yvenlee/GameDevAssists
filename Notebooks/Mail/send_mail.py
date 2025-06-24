@@ -1,15 +1,12 @@
-# Mail/send_mail.py
-
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
+from email.mime.application import MIMEApplication
 import os
 
 def envoyer_email(destinataire, sujet, corps, fichier_joint=None):
     expediteur = "yvenlycee@gmail.com"
-    mot_de_passe = "chwzkaptbkoltcco"  # OK pour le moment
+    mot_de_passe = "chwzkaptbkoltcco"  # mot de passe d'application Gmail
 
     msg = MIMEMultipart()
     msg["From"] = expediteur
@@ -20,17 +17,16 @@ def envoyer_email(destinataire, sujet, corps, fichier_joint=None):
 
     if fichier_joint:
         try:
-            with open(fichier_joint, "rb") as f:
-                part = MIMEBase("application", "octet-stream")
-                part.set_payload(f.read())
-                encoders.encode_base64(part)
-                part.add_header(
-                    "Content-Disposition",
-                    f"attachment; filename={os.path.basename(fichier_joint)}"
-                )
-                msg.attach(part)
+            # Lire le fichier en binaire
+            contenu = fichier_joint.read()
+            part = MIMEApplication(contenu)
+            part.add_header(
+                "Content-Disposition",
+                f"attachment; filename={fichier_joint.name}"
+            )
+            msg.attach(part)
         except Exception as e:
-            return False, f"Erreur lors de l'ouverture du fichier : {e}"
+            return False, f"Erreur avec le fichier joint : {e}"
 
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as serveur:

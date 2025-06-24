@@ -1,3 +1,4 @@
+#/Notebooks/app.py
 import os
 import json
 import time
@@ -9,6 +10,8 @@ from email.mime.multipart import MIMEMultipart
 import pandas as pd
 import plotly.express as px
 import difflib
+from Mail.send_mail import envoyer_email
+
 
 # Configuration API Mistral
 api_key = "cfseJTWU46kQZLNokDUYE79JYQmxkb4T"
@@ -81,12 +84,22 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+import re
+
+def clean_markdown(text):
+    # Supprimer les caractères Markdown (gras, italique, titres)
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)   # **gras**
+    text = re.sub(r"\*(.*?)\*", r"\1", text)       # *italique*
+    text = re.sub(r"#+\s?", "", text)              # # Titre
+    text = re.sub(r"`{1,3}(.*?)`{1,3}", r"\1", text)  # `code`
+    return text
+
 def incremental_text_display(text, delay=0.8):
     text_display = st.empty()
+    cleaned_text = clean_markdown(text)  # Nettoyage ici
     full_response = ""
-    sections = text.split('\n\n')
+    sections = cleaned_text.split('\n\n')
 
-    # Début du bloc scrollable stylisé
     full_response += """
     <div style="
         background-color: #1f1f1f;
@@ -105,15 +118,13 @@ def incremental_text_display(text, delay=0.8):
     """
 
     for section in sections:
-        if section.startswith("## "):
-            full_response += f'<p class="section-title">{section}</p>'
-        else:
-            full_response += section + '<br><br>'
+        full_response += f"{section}<br><br>"
         time.sleep(delay)
         text_display.markdown(f'{full_response}▌</div>', unsafe_allow_html=True)
 
-    # Fin du bloc sans curseur
     text_display.markdown(f'{full_response}</div>', unsafe_allow_html=True)
+
+
 
 
 def analyze_comments(selected_comments, game_name):
@@ -140,7 +151,7 @@ def analyze_comments(selected_comments, game_name):
 
 def send_email(receiver_email, file_path, game_title):
     sender_email = "yvenlycee@gmail.com"
-    sender_password = "stsuvlpolprhvsbm"
+    sender_password = "chwzkaptbkoltcco"
 
     msg = MIMEMultipart()
     msg["From"] = sender_email
@@ -288,13 +299,46 @@ if "selected_game" in st.session_state:
 
                 st.download_button("📥 Télécharger le rapport (.txt)", data=analysis_result, file_name=file_name, mime="text/plain")
 
-                with st.expander("✉️ Envoyer le rapport par email"):
-                    receiver_email = st.text_input("Adresse du destinataire :", value="harrisonndiba338@gmail.com")
-                    if st.button("📨 Envoyer par email"):
-                        with st.spinner("Envoi en cours..."):
-                            if send_email(receiver_email, file_name, selected_game):
-                                st.success("✅ Email envoyé avec succès !")
+                with st.expander("✉️ Envoyer un email avec ou sans pièce jointe"):
+                    st.markdown("Remplis les informations ci-dessous pour envoyer un e-mail personnalisé.")
 
+                    destinataire = st.text_input("✉️ Adresse email du destinataire", value="harrisonndiba338@gmail.com")
+                    sujet = st.text_input("📝 Sujet du message", value=f"Rapport d'analyse - {selected_game}")
+                    corps = st.text_area("📄 Contenu du message", value=f"""Bonjour,
+
+                Veuillez trouver ci-joint le rapport d'analyse du jeu « {selected_game} ».
+
+                Cordialement.
+                """, height=150)
+
+                    fichier_joint = st.file_uploader("📎 Fichier à joindre (optionnel)", type=["txt", "pdf", "csv", "docx"])
+
+                    # Si aucun fichier n'est uploadé, on proposera d'utiliser le rapport généré automatiquement
+                    use_generated_report = st.checkbox("📌 Utiliser le rapport généré automatiquement", value=True)
+
+                    if st.button("📨 Envoyer l'e-mail"):
+                        if not destinataire or not sujet or not corps:
+                            st.warning("Merci de remplir tous les champs obligatoires.")
+                        else:
+                            # Choisir le fichier : uploadé ou généré
+                            final_fichier = fichier_joint if fichier_joint else (open(file_name, "rb") if use_generated_report else None)
+
+                            with st.spinner("Envoi en cours..."):
+                                try:
+                                    success, message = envoyer_email(
+                                        destinataire=destinataire,
+                                        sujet=sujet,
+                                        corps=corps,
+                                        fichier_joint=final_fichier
+                                    )
+                                    if success:
+                                        st.success("✅ " + message)
+                                    else:
+                                        st.error("❌ " + message)
+                                finally:
+                                    # Si on a ouvert le fichier localement, on le ferme proprement
+                                    if final_fichier and not fichier_joint:
+                                        final_fichier.close()
 @st.cache_data
 def load_cleaned_data():
     file_path = os.path.join("..\Data\games_cleaned.json")
@@ -384,4 +428,3 @@ if selected_game_dash and selected_game_dash in cleaned_data:
         """)
 else:
     st.info("Veuillez sélectionner un jeu pour afficher les statistiques.")
-
