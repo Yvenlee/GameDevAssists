@@ -94,7 +94,7 @@ def clean_markdown(text):
     text = re.sub(r"`{1,3}(.*?)`{1,3}", r"\1", text)  # `code`
     return text
 
-def incremental_text_display(text, delay=0.8):
+def incremental_text_display(text, delay=0.5):
     text_display = st.empty()
     cleaned_text = clean_markdown(text)  # Nettoyage ici
     full_response = ""
@@ -217,14 +217,19 @@ if not search_game:
 
     paginated_games = paginate_games(game_names, st.session_state.page, games_per_page)
 
-    cols = st.columns(len(paginated_games))
-    for i, col in enumerate(cols):
-        with col:
-            game_index = game_names.index(paginated_games[i])
-            if game_index < len(game_logos):
-                st.image(game_logos[game_index], caption=paginated_games[i], use_container_width=True)
-            if st.button(f"🟢 Sélectionner", key=f"select_{i}"):
-                st.session_state["selected_game"] = paginated_games[i]
+    cols = st.columns(4)
+    for i in range(4):
+        with cols[i]:
+            if i < len(paginated_games):
+                game_name = paginated_games[i]
+                game_index = game_names.index(game_name)
+                if game_index < len(game_logos):
+                    st.image(game_logos[game_index], caption=game_name, use_container_width=True)
+                if st.button(f"🟢 Sélectionner", key=f"select_{st.session_state.page}_{i}"):
+                    st.session_state["selected_game"] = game_name
+            else:
+                st.empty()
+
 
     col1, col2, col3 = st.columns([3, 16, 1])
     with col1:
@@ -336,7 +341,6 @@ if "selected_game" in st.session_state:
                                     else:
                                         st.error("❌ " + message)
                                 finally:
-                                    # Si on a ouvert le fichier localement, on le ferme proprement
                                     if final_fichier and not fichier_joint:
                                         final_fichier.close()
 @st.cache_data

@@ -17,7 +17,6 @@ def envoyer_email(destinataire, sujet, corps, fichier_joint=None):
 
     if fichier_joint:
         try:
-            # Lire le fichier en binaire
             contenu = fichier_joint.read()
             part = MIMEApplication(contenu)
             part.add_header(

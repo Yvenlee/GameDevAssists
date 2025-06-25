@@ -50,7 +50,6 @@ def parse_date_posted(date_str):
     else:
         return None
 
-    # Essayer plusieurs formats
     for fmt in ("%B %d, %Y", "%d %B %Y", "%d %B, %Y"):
         try:
             dt = datetime.strptime(date_part, fmt)
@@ -70,7 +69,7 @@ def clean_recommended(rec_str):
     else:
         return None
 
-def clean_games_data(input_path="C:/Users/yvenl/OneDrive/Bureau/GameDevAssists/Data/games.json", output_path="games_cleaned.json"):
+def clean_games_data(input_path="Data/games.json", output_path="games_cleaned.json"):
     with open(input_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
