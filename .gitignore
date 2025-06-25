@@ -2,4 +2,12 @@
 /Notebooks/__pycache__
 /Notebooks/games.json
 /Notebooks/games_cleaned.json
-/Data/games.json
+/Notebooks/data/__pycache__
+/Notebooks/scraping/__pycache__
+/Notebooks/config/__pycache__
+/Notebooks/analysis/__pycache__
+/Notebooks/dashboard/__pycache__
+/Notebooks/display/__pycache__
+/Notebooks/Mail/__pycache__
+/Notebooks/utils/__pycache__
+/Scraping

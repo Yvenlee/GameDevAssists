@@ -1,434 +1,124 @@
-#/Notebooks/app.py
-import os
-import json
-import time
-import streamlit as st
-from mistralai import Mistral
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import pandas as pd
-import plotly.express as px
-import difflib
+import streamlit as st
+import threading
+import time
+import json
+
+# --- Tes imports habituels ---
+from scraping.scrapingfusion import scraping_generator
+from data.loader import load_games_data, load_image_urls, load_cleaned_data
+from display.styles import apply_styles
+from display.game_selector import search_bar, render_game_grid
+from analysis.sentiment import analyze_comments
+from dashboard.stats import display_dashboard
 from Mail.send_mail import envoyer_email
 
+# Applique les styles
+apply_styles()
 
-# Configuration API Mistral
-api_key = "cfseJTWU46kQZLNokDUYE79JYQmxkb4T"
-model = "mistral-large-2411"
-client = Mistral(api_key=api_key)
-st.set_page_config(page_title="Analyse Jeux Steam", layout="wide")
-
-def load_image_urls():
-    file_path = os.path.join("..\Data\image_urls.json")
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return []
-
+# Chargement données
 game_logos = load_image_urls()
-
-def load_games_data():
-    file_path = os.path.join("..\Data\games.json")
-    with open(file_path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def paginate_games(games, page, per_page=4):
-    start = page * per_page
-    end = start + per_page
-    return games[start:end]
-
-st.markdown("""
-    <style>
-    .incremental-text {
-        font-family: 'Arial', sans-serif;
-        font-size: 1em;
-    }
-    .section-title {
-        font-weight: bold;
-        margin-top: 10px;
-    }
-    .title {
-        text-align: center;
-        font-size: 3em;
-        margin-top: -30px;
-        margin-bottom: 20px;
-        color: #1DB954;
-    }
-    .game-img {
-        transition: transform 0.2s ease;
-        border-radius: 12px;
-        border: 2px solid transparent;
-    }
-    .game-img:hover {
-        transform: scale(1.03);
-        border-color: #1DB954;
-        cursor: pointer;
-    }
-    .footer {
-        margin-top: 3rem;
-        text-align: center;
-        font-size: 0.9em;
-        color: #aaa;
-    }
-    .stApp {
-        background: linear-gradient(135deg, #1a1a1a, #2b2b2b);
-        color: #fff;
-    }
-    input::placeholder {
-        color: #aaa;
-        font-style: italic;
-        opacity: 0.7;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-import re
-
-def clean_markdown(text):
-    # Supprimer les caractères Markdown (gras, italique, titres)
-    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)   # **gras**
-    text = re.sub(r"\*(.*?)\*", r"\1", text)       # *italique*
-    text = re.sub(r"#+\s?", "", text)              # # Titre
-    text = re.sub(r"`{1,3}(.*?)`{1,3}", r"\1", text)  # `code`
-    return text
-
-def incremental_text_display(text, delay=0.5):
-    text_display = st.empty()
-    cleaned_text = clean_markdown(text)  # Nettoyage ici
-    full_response = ""
-    sections = cleaned_text.split('\n\n')
-
-    full_response += """
-    <div style="
-        background-color: #1f1f1f;
-        border: 2px solid #1DB954;
-        border-radius: 12px;
-        padding: 20px;
-        margin-top: 20px;
-        margin-bottom: 30px;
-        max-height: 400px;
-        overflow-y: auto;
-        font-family: 'Arial', sans-serif;
-        font-size: 1em;
-        line-height: 1.6;
-        color: #ffffff;
-    ">
-    """
-
-    for section in sections:
-        full_response += f"{section}<br><br>"
-        time.sleep(delay)
-        text_display.markdown(f'{full_response}▌</div>', unsafe_allow_html=True)
-
-    text_display.markdown(f'{full_response}</div>', unsafe_allow_html=True)
-
-
-
-
-def analyze_comments(selected_comments, game_name):
-    start_time = time.time()
-    prompt = (
-        f"Analyse les avis suivants pour le jeu « {game_name} » et génère une synthèse :\n"
-        "1. Quel est le sentiment général pour chaque avis (positif, neutre, négatif) ?\n"
-        "2. Quel est l'avis général sur le jeu ?\n"
-        "3. Quels sont les points forts et les points faibles mentionnés ?\n"
-        "4. Que faut-il améliorer selon les joueurs ?\n\n"
-        "Avis :\n" +
-        "\n".join([f"{i+1}. \"{c}\"" for i, c in enumerate(selected_comments) if c]) +
-        "\n\nSynthèse :"
-    )
-    message = [{"role": "system", "content": prompt}]
-    chat_response = client.chat.complete(model=model, messages=message)
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    st.write(f"Temps d'analyse : {elapsed_time:.2f} secondes pour {len(selected_comments)} avis.")
-
-    incremental_text_display(chat_response.choices[0].message.content)
-
-    return chat_response.choices[0].message.content
-
-def send_email(receiver_email, file_path, game_title):
-    sender_email = "yvenlycee@gmail.com"
-    sender_password = "chwzkaptbkoltcco"
-
-    msg = MIMEMultipart()
-    msg["From"] = sender_email
-    msg["To"] = receiver_email
-    msg["Subject"] = f"Rapport d'analyse - {game_title}"
-
-    body = f"""Bonjour,
-
-Veuillez trouver ci-joint le rapport d'analyse du jeu « {game_title} ».
-
-Cordialement.
-"""
-    msg.attach(MIMEText(body, "plain"))
-
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            attachment = MIMEText(f.read(), _subtype="plain")
-            attachment.add_header(
-                "Content-Disposition",
-                "attachment",
-                filename=os.path.basename(file_path)
-            )
-            msg.attach(attachment)
-    except Exception as e:
-        st.error(f"Erreur lors de la lecture du fichier à joindre : {e}")
-        return False
-
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as serveur:
-            serveur.login(sender_email, sender_password)
-            serveur.send_message(msg)
-        return True
-    except Exception as e:
-        st.error(f"Erreur lors de l'envoi de l'email : {e}")
-        return False
-
-st.markdown('<h1 class="title">🎮 Mistral Vision Steam</h1>', unsafe_allow_html=True)
-
 games_data = load_games_data()
+cleaned_data = load_cleaned_data()
 game_names = list(games_data.keys())
 
-search_game = st.text_input("", placeholder="Cherchez votre jeu ici...").strip()
-if search_game:
-    game_names_lower = [name.lower() for name in game_names]
-    matches = difflib.get_close_matches(search_game.lower(), game_names_lower, n=1, cutoff=0.6)
-    
-    if matches:
-        matched_index = game_names_lower.index(matches[0])
-        matched_game = game_names[matched_index]
-        st.session_state["selected_game"] = matched_game
-        st.success(f"🎯 Jeu trouvé : **{matched_game}** (à partir de \"{search_game}\")")
-    else:
-        st.warning("❌ Aucun jeu correspondant trouvé. Essayez un autre nom ou corrigez l’orthographe.")
-
-if not search_game:
-    st.markdown("### Choisis un jeu à analyser :")
-
-    if 'page' not in st.session_state:
-        st.session_state.page = 0
-
-    games_per_page = 4
-    total_pages = len(game_names) // games_per_page + (1 if len(game_names) % games_per_page else 0)
-
-    paginated_games = paginate_games(game_names, st.session_state.page, games_per_page)
-
-    cols = st.columns(4)
-    for i in range(4):
-        with cols[i]:
-            if i < len(paginated_games):
-                game_name = paginated_games[i]
-                game_index = game_names.index(game_name)
-                if game_index < len(game_logos):
-                    st.image(game_logos[game_index], caption=game_name, use_container_width=True)
-                if st.button(f"🟢 Sélectionner", key=f"select_{st.session_state.page}_{i}"):
-                    st.session_state["selected_game"] = game_name
-            else:
-                st.empty()
-
-
-    col1, col2, col3 = st.columns([3, 16, 1])
-    with col1:
-        if st.button("Précédent") and st.session_state.page > 0:
-            st.session_state.page -= 1
-            st.rerun()
-
-    with col3:
-        if st.button("Suivant") and st.session_state.page < total_pages - 1:
-            st.session_state.page += 1
-            st.rerun()
+st.markdown("<h1 style='text-align: center; color: white;'>Mistral Vision Steam</h1>", unsafe_allow_html=True)
+search_bar(game_names) or render_game_grid(game_names, game_logos)
 
 if "selected_game" in st.session_state:
-    selected_game = st.session_state["selected_game"]
-    st.markdown(f"## Jeu sélectionné : **{selected_game}**")
+    selected = st.session_state.selected_game
+    st.markdown(f"## Jeu sélectionné : **{selected}**")
 
-    if selected_game in games_data:
-        raw_data = games_data[selected_game]
-        df = pd.DataFrame(raw_data)[["Recommended", "Hours Played", "Date Posted", "Comment"]]
-        st.markdown("Base de données des avis collectés")
-        st.dataframe(df, use_container_width=True, height=350)
+    # Initialisation état scraping dans session_state
+    if "scraping_thread" not in st.session_state:
+        st.session_state.scraping_thread = None
+    if "stop_flag" not in st.session_state:
+        st.session_state.stop_flag = {"stop": False}
+    if "extracted_count" not in st.session_state:
+        st.session_state.extracted_count = 0
+    if "scraping_done" not in st.session_state:
+        st.session_state.scraping_done = False
 
-        comments = [rev["Comment"].strip() for rev in raw_data if rev["Comment"].strip()]
-    else:
-        comments = []
+    def run_scraping():
+        st.session_state.stop_flag["stop"] = False
+        st.session_state.scraping_done = False
+        for count in scraping_generator(selected, st.session_state.stop_flag):
+            st.session_state.extracted_count = count
+            time.sleep(0.1)
+            if st.session_state.stop_flag["stop"]:
+                break
+        st.session_state.scraping_done = True
+        # Une fois fini ou stoppé, on rafraîchit la page
+        st.rerun()
 
+    # Si le jeu n'est pas trouvé dans games_data, on propose de lancer le scraping
+    if selected not in games_data or not games_data[selected]:
+        st.warning(f"Le jeu '{selected}' n'a pas été trouvé dans la base de données locale.")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Lancer scraping"):
+                if st.session_state.scraping_thread and st.session_state.scraping_thread.is_alive():
+                    st.warning("Scraping déjà en cours.")
+                else:
+                    st.session_state.extracted_count = 0
+                    st.session_state.stop_flag["stop"] = False
+                    thread = threading.Thread(target=run_scraping, daemon=True)
+                    st.session_state.scraping_thread = thread
+                    thread.start()
+        with col2:
+            if st.button("Stop scraping"):
+                st.session_state.stop_flag["stop"] = True
+                st.success("Arrêt du scraping demandé.")
 
-    # Fonction pour créer un metric personnalisé avec une couleur spécifique
-    def custom_metric(label, value, color):
-        return f"""
-        <div style="border-left: 4px solid {color}; padding-left: 10px; margin-bottom: 20px;">
-            <div style="font-size: 14px; color: #aaa;">{label}</div>
-            <div style="font-size: 24px; color: {color}; font-weight: bold;">{value}</div>
-        </div>
-        """
+        st.markdown(f"**Avis extraits en live :** {st.session_state.extracted_count}")
+        
+        # On stoppe l’exécution ici car il n’y a pas encore de données
+        st.stop()
 
-    # Utilisation de la fonction custom_metric
-    st.markdown(custom_metric("Nombre d'avis disponibles", len(comments), "#1a7fdd"), unsafe_allow_html=True)
-
-
-    if not comments:
-        st.warning("Aucun commentaire disponible pour ce jeu.")
-    else:
-        n_comments_input = st.number_input(
-            "Nombre d'avis à analyser :",
-            min_value=1,
-            max_value=len(comments),
-            value=min(5, len(comments)),
-            key="n_comments_input"
-        )
-
-        if 'n_comments' not in st.session_state:
-            st.session_state.n_comments = n_comments_input
-
-        n_comments = st.slider(
-            "Ajustez le nombre d'avis à analyser :",
-            1,
-            len(comments),
-            st.session_state.n_comments,
-            key="n_comments_slider"
-        )
-
+    # --- Sinon on continue avec l’affichage normal des données existantes ---
+    raw = games_data[selected]
+    df = pd.DataFrame(raw)[["Recommended","Hours Played","Date Posted","Comment"]]
+    st.markdown("Base de données des avis collectés")
+    st.dataframe(df, use_container_width=True, height=350)
+    
+    comments = [r["Comment"].strip() for r in raw if r["Comment"].strip()]
+    st.markdown(f"""<div style="border-left:4px solid #1a7fdd;padding-left:10px;margin-bottom:20px;">
+        <div style="font-size:14px;color:#aaa;">Nombre d'avis disponibles</div>
+        <div style="font-size:24px;color:#1a7fdd;font-weight:bold;">{len(comments)}</div>
+    </div>""", unsafe_allow_html=True)
+    
+    if comments:
+        nmax = len(comments)
+        sel = st.number_input("Nombre d'avis à analyser :",1,nmax,value=min(5,nmax))
+        n = st.slider("Ajustez le nombre d'avis :",1,nmax, sel)
         if st.button("Lancer l'analyse des sentiments"):
-            selected_comments = comments[:n_comments]
             with st.spinner("Génération du rapport en cours..."):
-                analysis_result = analyze_comments(selected_comments, selected_game)
-                st.subheader("Rapport d'analyse généré")
-
-                file_name = f"rapport_{selected_game.replace(' ', '_')}.txt"
-                with open(file_name, "w", encoding="utf-8") as f:
-                    f.write(analysis_result)
-
-                st.download_button("📥 Télécharger le rapport (.txt)", data=analysis_result, file_name=file_name, mime="text/plain")
-
+                result = analyze_comments(comments[:n], selected)
+                st.subheader("Rapport généré")
+                fname = f"rapport_{selected.replace(' ','_')}.txt"
+                open(fname,"w",encoding="utf-8").write(result)
+                st.download_button("📥 Télécharger le rapport (.txt)", data=result, file_name=fname, mime="text/plain")
                 with st.expander("✉️ Envoyer un email avec ou sans pièce jointe"):
-                    st.markdown("Remplis les informations ci-dessous pour envoyer un e-mail personnalisé.")
-
-                    destinataire = st.text_input("✉️ Adresse email du destinataire", value="harrisonndiba338@gmail.com")
-                    sujet = st.text_input("📝 Sujet du message", value=f"Rapport d'analyse - {selected_game}")
-                    corps = st.text_area("📄 Contenu du message", value=f"""Bonjour,
-
-                Veuillez trouver ci-joint le rapport d'analyse du jeu « {selected_game} ».
-
-                Cordialement.
-                """, height=150)
-
-                    fichier_joint = st.file_uploader("📎 Fichier à joindre (optionnel)", type=["txt", "pdf", "csv", "docx"])
-
-                    # Si aucun fichier n'est uploadé, on proposera d'utiliser le rapport généré automatiquement
-                    use_generated_report = st.checkbox("📌 Utiliser le rapport généré automatiquement", value=True)
-
+                    dest = st.text_input("✉️ Adresse email", "harrisonndiba338@gmail.com")
+                    subj = st.text_input("📝 Sujet", f"Rapport d'analyse - {selected}")
+                    body = st.text_area("📄 Contenu", f"Bonjour,\n\nVeuillez trouver ci-joint le rapport d'analyse du jeu « {selected} ».\nCordialement.",height=150)
+                    upload = st.file_uploader("📎 Fichier à joindre", type=["txt","pdf","csv","docx"])
+                    use_gen = st.checkbox("📌 Utiliser rapport généré", value=True)
                     if st.button("📨 Envoyer l'e-mail"):
-                        if not destinataire or not sujet or not corps:
+                        if not dest or not subj or not body:
                             st.warning("Merci de remplir tous les champs obligatoires.")
                         else:
-                            # Choisir le fichier : uploadé ou généré
-                            final_fichier = fichier_joint if fichier_joint else (open(file_name, "rb") if use_generated_report else None)
-
+                            file_obj = upload if upload else (open(fname,"rb") if use_gen else None)
                             with st.spinner("Envoi en cours..."):
-                                try:
-                                    success, message = envoyer_email(
-                                        destinataire=destinataire,
-                                        sujet=sujet,
-                                        corps=corps,
-                                        fichier_joint=final_fichier
-                                    )
-                                    if success:
-                                        st.success("✅ " + message)
-                                    else:
-                                        st.error("❌ " + message)
-                                finally:
-                                    if final_fichier and not fichier_joint:
-                                        final_fichier.close()
-@st.cache_data
-def load_cleaned_data():
-    file_path = os.path.join("..\Data\games_cleaned.json")
-    with open(file_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+                                ok,msg = envoyer_email(dest, subj, body, file_obj)
+                                st.success("✅ "+msg) if ok else st.error("❌ "+msg)
+                                if file_obj and not upload: file_obj.close()
+    else:
+        st.warning("Aucun commentaire disponible pour ce jeu.")
 
-# --- Section Dashboard toujours visible ---
-st.markdown("## 📊 Dashboard Statistiques & Graphiques")
-cleaned_data = load_cleaned_data()
-
-selected_game_dash = st.session_state.get("selected_game")
-
-if selected_game_dash and selected_game_dash in cleaned_data:
-    data = cleaned_data[selected_game_dash]
-    df = pd.DataFrame(data)
-
-    # Formatage des colonnes
-    df["Recommended"] = pd.to_numeric(df["Recommended"], errors="coerce")
-    df["Hours Played"] = pd.to_numeric(df["Hours Played"], errors="coerce")
-    df["Date Posted"] = pd.to_datetime(df["Date Posted"], errors="coerce")
-
-    st.markdown(f"### Jeu sélectionné pour le dashboard : **{selected_game_dash}**")
-
-    # Utilisation de st.metric pour les statistiques globales
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric(label="Nombre d'avis total", value=len(df))
-    with col2:
-        st.metric(label="Heures jouées moyenne", value=f"{df['Hours Played'].mean():.2f} heures")
-    with col3:
-        st.metric(label="Heures jouées max", value=f"{df['Hours Played'].max():.2f} heures")
-
-    # Création des graphiques côte à côte
-    col1, col2 = st.columns(2)
-
-    with col1:
-        # Pie chart recommandation
-        rec_counts = df["Recommended"].value_counts().sort_index()
-        fig_rec = px.pie(
-            names=rec_counts.index.map({1: "Recommandé", 0: "Non recommandé"}),
-            values=rec_counts.values,
-            title="Répartition des recommandations"
-        )
-        st.plotly_chart(fig_rec, use_container_width=True)
-
-    with col2:
-        # Histogramme heures jouées
-        fig_hours = px.histogram(
-            df.dropna(subset=["Hours Played"]),
-            x="Hours Played",
-            nbins=30,
-            title="Distribution des heures jouées"
-        )
-        st.plotly_chart(fig_hours, use_container_width=True)
-
-    # Graph avis dans le temps
-    fig_time = px.line(
-        df.dropna(subset=["Date Posted"]).groupby("Date Posted").size().reset_index(name='count'),
-        x="Date Posted",
-        y="count",
-        title="Nombre d'avis postés au fil du temps"
-    )
-    st.plotly_chart(fig_time, use_container_width=True)
-
-
-    # 🧠 Informations sur le modèle
-    with st.expander("Informations sur le modèle"):
-        st.markdown("""
-        - **Modèle utilisé** : `mistral-large-2411`
-        - **API provider** : [Mistral AI](https://mistral.ai)
-        - **Utilisation** : Analyse de sentiment sur les commentaires des utilisateurs
-        - **Objectif** : Identifier sentiments, points positifs/négatifs, et suggestions d'amélioration.
-        """)
-
-    # ℹ️ À propos de l'application
-    with st.expander("À propos de"):
-        st.markdown("""
-        Cette application a été développée pour analyser les avis Steam de jeux vidéo à l’aide d’un modèle LLM.
-
-        **Fonctionnalités principales :**
-        - Analyse sémantique des avis
-        - Génération de rapport synthétique
-        - Envoi du rapport par email
-        - Visualisation de statistiques et graphiques dynamiques
-
-        👨‍💻 *Développé avec amour par un passionné de data & IA.*
-        """)
+# Dashboard
+if st.session_state.get("selected_game") and st.session_state.selected_game in cleaned_data:
+    display_dashboard(cleaned_data[st.session_state.selected_game], st.session_state.selected_game)
 else:
     st.info("Veuillez sélectionner un jeu pour afficher les statistiques.")
