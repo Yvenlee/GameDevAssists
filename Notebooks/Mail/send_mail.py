@@ -7,7 +7,7 @@ import os
 
 def envoyer_email(destinataire, sujet, corps, fichier_joint=None):
     expediteur = "yvenlycee@gmail.com"
-    mot_de_passe = "chwzkaptbkoltcco"  # mot de passe d'application Gmail
+    mot_de_passe = "chwzkaptbkoltcco"
 
     msg = MIMEMultipart()
     msg["From"] = expediteur
