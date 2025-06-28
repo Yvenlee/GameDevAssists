@@ -9,6 +9,8 @@ def display_dashboard(data, game_name):
     df["Date Posted"] = pd.to_datetime(df["Date Posted"], errors="coerce")
 
     st.markdown(f"### Jeu sélectionné pour le dashboard : **{game_name}**")
+
+    # Métriques principales
     c1, c2, c3 = st.columns(3)
     with c1:
         st.metric("Nombre d'avis total", len(df))
@@ -17,14 +19,29 @@ def display_dashboard(data, game_name):
     with c3:
         st.metric("Heures jouées max", f"{df['Hours Played'].max():.2f} h")
 
-    rec = df["Recommended"].value_counts().sort_index()
+    # Camembert recommandations (couleurs fixes)
+    rec_counts = {
+        "Recommandé": df["Recommended"].eq(1).sum(),
+        "Non recommandé": df["Recommended"].eq(0).sum()
+    }
+    rec_df = pd.DataFrame({
+        "Recommandation": list(rec_counts.keys()),
+        "Valeurs": list(rec_counts.values())
+    })
+
     fig1 = px.pie(
-        names=rec.index.map({1: "Recommandé", 0: "Non recommandé"}),
-        values=rec.values,
+        rec_df,
+        names="Recommandation",
+        values="Valeurs",
         title="Répartition des recommandations",
-        color_discrete_sequence=["#2ca02c", "#d62728"]
+        color="Recommandation",
+        color_discrete_map={
+            "Recommandé": "#2ca02c",       # vert
+            "Non recommandé": "#d62728"    # rouge
+        }
     )
 
+    # Histogramme heures jouées
     fig2 = px.histogram(
         df.dropna(subset=["Hours Played"]),
         x="Hours Played",
@@ -34,13 +51,13 @@ def display_dashboard(data, game_name):
         color_discrete_sequence=["#FFD700"]
     )
 
+    # Barres empilées (avis par tranche d'heures)
     df_binned = df.dropna(subset=["Hours Played", "Recommended"]).copy()
     df_binned["Tranche d'heures"] = pd.cut(
         df_binned["Hours Played"],
         bins=[0, 1, 5, 20, 100, float("inf")],
         labels=["<1h", "1–5h", "5–20h", "20–100h", "100h+"]
     )
-
     counts = df_binned.groupby(["Tranche d'heures", "Recommended"]).size().reset_index(name="count")
     counts["Type d'avis"] = counts["Recommended"].map({1: "Positif", 0: "Négatif"})
     total_per_bin = counts.groupby("Tranche d'heures")["count"].transform("sum")
@@ -54,11 +71,14 @@ def display_dashboard(data, game_name):
         title="Proportion d'avis positifs et négatifs par tranche d'heures jouées (100%)",
         labels={"Tranche d'heures": "Tranche d'heures jouées", "Pourcentage": "Pourcentage (%)"},
         text_auto=".1f",
-        color_discrete_map={"Positif": "#2ca02c", "Négatif": "#d62728"}
+        color_discrete_map={
+            "Positif": "#2ca02c",
+            "Négatif": "#d62728"
+        }
     )
     fig3.update_layout(barmode="stack", yaxis=dict(ticksuffix="%"))
 
-    # Boxplot des heures jouées selon recommandation (sans valeurs aberrantes)
+    # Boxplot (sans outliers)
     box_df = df.dropna(subset=["Hours Played", "Recommended"])
     Q1 = box_df["Hours Played"].quantile(0.25)
     Q3 = box_df["Hours Played"].quantile(0.75)
@@ -74,7 +94,7 @@ def display_dashboard(data, game_name):
         labels={"Recommended Label": "Recommandation", "Hours Played": "Heures jouées"}
     )
 
-    # Graphique évolution médiane des heures jouées par mois
+    # Ligne évolution médiane
     df_time_hours = df.dropna(subset=["Date Posted", "Hours Played"]).copy()
     df_time_hours["Mois"] = df_time_hours["Date Posted"].dt.to_period("M").dt.to_timestamp()
     median_per_month = df_time_hours.groupby("Mois")["Hours Played"].median().reset_index()
@@ -89,7 +109,7 @@ def display_dashboard(data, game_name):
         color_discrete_sequence=["#925dc4"]
     )
 
-    # Affichage en colonnes, 2 colonnes pour les 4 premiers graphiques
+    # Affichage en colonnes
     col1, col2 = st.columns(2)
     with col1:
         st.plotly_chart(fig1, use_container_width=True)
@@ -98,5 +118,5 @@ def display_dashboard(data, game_name):
         st.plotly_chart(fig2, use_container_width=True)
         st.plotly_chart(fig4, use_container_width=True)
 
-    # Dernier graphique en full width
+    # Ligne en bas
     st.plotly_chart(fig6, use_container_width=True)

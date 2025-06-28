@@ -12,6 +12,7 @@ from display.game_selector import search_bar, render_game_grid
 from analysis.sentiment import analyze_comments
 from dashboard.stats import display_dashboard
 from Mail.send_mail import envoyer_email
+from cleaner.traitement import clean_games_data
 
 # Applique les styles
 apply_styles()
@@ -48,10 +49,8 @@ if "selected_game" in st.session_state:
             if st.session_state.stop_flag["stop"]:
                 break
         st.session_state.scraping_done = True
-        # Une fois fini ou stoppé, on rafraîchit la page
         st.rerun()
 
-    # Si le jeu n'est pas trouvé dans games_data, on propose de lancer le scraping
     if selected not in games_data or not games_data[selected]:
         st.warning(f"Le jeu '{selected}' n'a pas été trouvé dans la base de données locale.")
         
@@ -73,10 +72,8 @@ if "selected_game" in st.session_state:
 
         st.markdown(f"**Avis extraits en live :** {st.session_state.extracted_count}")
         
-        # On stoppe l’exécution ici car il n’y a pas encore de données
         st.stop()
 
-    # --- Sinon on continue avec l’affichage normal des données existantes ---
     raw = games_data[selected]
     df = pd.DataFrame(raw)[["Recommended","Hours Played","Date Posted","Comment"]]
     st.markdown("Base de données des avis collectés")

@@ -15,7 +15,7 @@ def incremental_display(text, delay=0.5):
 def analyze_comments(comments, game_name):
     start = time.time()
     prompt = (
-        f"Analyse les avis suivants pour {game_name}…\n\n" +
+        f"Analyse les avis suivants pour {game_name}Puis fais une synthèse dans laquelle tu mettras en avant les points positifs et négatifs. Enfin trouve des idées pour corriger les défauts.\n\n" +
         "\n".join([f"{i+1}. \"{c}\"" for i, c in enumerate(comments)]) +
         "\n\nSynthèse :"
     )

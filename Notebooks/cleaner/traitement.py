@@ -2,7 +2,6 @@ import json
 import re
 from datetime import datetime
 
-# Pour conversion des mois français
 FRENCH_MONTHS = {
     "janvier": "January",
     "février": "February",
@@ -31,7 +30,6 @@ def parse_hours_played(hours_str):
     return None
 
 def translate_french_date_to_english(date_str):
-    # Remplace les mois français par leur équivalent anglais
     for fr, en in FRENCH_MONTHS.items():
         date_str = re.sub(fr, en, date_str, flags=re.IGNORECASE)
     return date_str
@@ -40,7 +38,6 @@ def parse_date_posted(date_str):
     if not isinstance(date_str, str):
         return None
 
-    # Nettoyer le préfixe
     date_str = date_str.strip()
     if date_str.lower().startswith("posted:"):
         date_part = date_str.replace("Posted:", "").strip()
@@ -69,7 +66,7 @@ def clean_recommended(rec_str):
     else:
         return None
 
-def clean_games_data(input_path="Data/games.json", output_path="games_cleaned.json"):
+def clean_games_data(input_path="../Notebooks/data/games.json", output_path="../Notebooks/data/games_cleaned.json"):
     with open(input_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -98,6 +95,8 @@ def clean_games_data(input_path="Data/games.json", output_path="games_cleaned.js
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(cleaned_data, f, ensure_ascii=False, indent=4)
 
+    return output_path
+
 if __name__ == "__main__":
-    clean_games_data()
-    print("Nettoyage terminé, fichier games_cleaned.json créé.")
+    path = clean_games_data()
+    print(f"✅ Nettoyage terminé : {path}")
