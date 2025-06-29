@@ -19,7 +19,7 @@ def display_dashboard(data, game_name):
     with c3:
         st.metric("Heures jouées max", f"{df['Hours Played'].max():.2f} h")
 
-    # Camembert recommandations (couleurs fixes)
+    # Camembert recommandations
     rec_counts = {
         "Recommandé": df["Recommended"].eq(1).sum(),
         "Non recommandé": df["Recommended"].eq(0).sum()
@@ -36,8 +36,8 @@ def display_dashboard(data, game_name):
         title="Répartition des recommandations",
         color="Recommandation",
         color_discrete_map={
-            "Recommandé": "#2ca02c",       # vert
-            "Non recommandé": "#d62728"    # rouge
+            "Recommandé": "#2ca02c",
+            "Non recommandé": "#d62728"
         }
     )
 
@@ -109,6 +109,25 @@ def display_dashboard(data, game_name):
         color_discrete_sequence=["#925dc4"]
     )
 
+        # Tendance des avis au fil du temps
+    df_time_rec = df.dropna(subset=["Date Posted", "Recommended"]).copy()
+    df_time_rec["Mois"] = df_time_rec["Date Posted"].dt.to_period("M").dt.to_timestamp()
+    df_time_rec["Type d'avis"] = df_time_rec["Recommended"].map({1: "Positif", 0: "Négatif"})
+    rec_trend = df_time_rec.groupby(["Mois", "Type d'avis"]).size().reset_index(name="Nombre d'avis")
+
+    fig7 = px.line(
+        rec_trend,
+        x="Mois",
+        y="Nombre d'avis",
+        color="Type d'avis",
+        title="Évolution du nombre d'avis positifs et négatifs par mois",
+        markers=True,
+        labels={"Mois": "Date", "Nombre d'avis": "Nombre d'avis"},
+        color_discrete_map={"Positif": "#2ca02c", "Négatif": "#d62728"}
+    )
+
+    
+
     # Affichage en colonnes
     col1, col2 = st.columns(2)
     with col1:
@@ -120,3 +139,5 @@ def display_dashboard(data, game_name):
 
     # Ligne en bas
     st.plotly_chart(fig6, use_container_width=True)
+    st.plotly_chart(fig7, use_container_width=True)
+

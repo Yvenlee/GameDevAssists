@@ -53,6 +53,19 @@ def parse_date_posted(date_str):
             return dt.strftime("%Y-%m-%d")
         except ValueError:
             continue
+
+    # Si pas d'année fournie, on ajoute l'année courante
+    today = datetime.today()
+    for fmt in ("%d %B", "%B %d"):
+        try:
+            dt = datetime.strptime(date_part, fmt)
+            dt = dt.replace(year=today.year)
+            if dt > today:
+                dt = dt.replace(year=today.year - 1)
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+
     return None
 
 def clean_recommended(rec_str):
@@ -99,4 +112,3 @@ def clean_games_data(input_path="../Notebooks/data/games.json", output_path="../
 
 if __name__ == "__main__":
     path = clean_games_data()
-    print(f"✅ Nettoyage terminé : {path}")

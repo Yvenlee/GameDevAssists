@@ -9,6 +9,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException, StaleElementReferenceException
 import threading
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+json_file = os.path.join(DATA_DIR, "games.json")
+image_urls_file = os.path.join(DATA_DIR, "image_urls.json")
 
 def setup_driver():
     options = webdriver.ChromeOptions()
@@ -35,8 +39,6 @@ def extract_image_url(driver):
         )
         image_url = image_element.get_attribute("src")
 
-        image_urls_file = r"C:\Users\yvenl\OneDrive\Bureau\GameDevAssists\Notebooks\data\image_urls.json"
-
         image_urls = []
         try:
             with open(image_urls_file, "r") as file:
@@ -58,7 +60,6 @@ def click_user_review(driver):
         review_links = WebDriverWait(driver, 10).until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.user_reviews_summary_row"))
         )
-
         if len(review_links) < 2:
             print("Moins de 2 liens d’évaluations trouvés.")
             return
@@ -70,19 +71,12 @@ def click_user_review(driver):
         try:
             WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "a.user_reviews_summary_row")))
             link_to_click.click()
-            print("Clic direct sur le lien d’évaluation.")
         except ElementClickInterceptedException:
-            print("Clic bloqué. Forçage avec JavaScript.")
             driver.execute_script("arguments[0].click();", link_to_click)
-            print("Clic JS réussi.")
         except StaleElementReferenceException:
-            print("Élément obsolète. Tentative de récupération...")
             updated_links = driver.find_elements(By.CSS_SELECTOR, "a.user_reviews_summary_row")
             if len(updated_links) >= 2:
                 driver.execute_script("arguments[0].click();", updated_links[1])
-                print("Clic JS sur élément mis à jour.")
-            else:
-                print("Impossible de retrouver le lien.")
     except TimeoutException:
         print("Aucun lien d’évaluation trouvé.")
 
@@ -92,11 +86,10 @@ def click_browse_reviews(driver):
             EC.presence_of_element_located((By.CSS_SELECTOR, "div#ViewAllReviewssummary"))
         )
         driver.execute_script("arguments[0].querySelector('a').click();", browse_reviews_div)
-        print("Cliqué sur le lien 'Parcourir les évaluations' avec JavaScript.")
     except TimeoutException:
         print("Impossible de trouver la div 'ViewAllReviewssummary'.")
     except Exception as e:
-        print(f"Une erreur est survenue lors du clic sur le lien : {e}")
+        print(f"Erreur lors du clic sur le lien : {e}")
 
 def extract_reviews(driver, game_name, remaining_limit):
     extracted_count = 0
@@ -112,7 +105,6 @@ def extract_reviews(driver, game_name, remaining_limit):
             recommended = container.find_element(By.CLASS_NAME, "title").text.strip()
             hours_played = container.find_element(By.CLASS_NAME, "hours").text.strip()
             date = container.find_element(By.CLASS_NAME, "date_posted").text.strip()
-
             comment_container = container.find_element(By.CLASS_NAME, "apphub_CardTextContent")
             comment = driver.execute_script(
                 "return arguments[0].childNodes[arguments[0].childNodes.length - 1].textContent;",
@@ -122,15 +114,13 @@ def extract_reviews(driver, game_name, remaining_limit):
             review_id = f"{game_name}-{recommended}-{hours_played}-{date}-{comment[:30]}"
             if review_id not in seen_reviews:
                 seen_reviews.add(review_id)
-                review = {
+                reviews_data[game_name].append({
                     "Recommended": recommended,
                     "Hours Played": hours_played,
                     "Date Posted": date,
                     "Comment": comment
-                }
-                reviews_data[game_name].append(review)
+                })
                 extracted_count += 1
-
         except Exception as e:
             print(f"Erreur pour un avis : {e}")
 
@@ -151,7 +141,6 @@ def scroll_and_extract(driver, game_name, count_limit=45):
 
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
-            print("Fin du scroll (plus de contenu).")
             break
         last_height = new_height
 
@@ -161,8 +150,15 @@ def save_json():
     with open(json_file, 'w', encoding='utf-8') as f:
         json.dump(reviews_data, f, ensure_ascii=False, indent=4)
 
-json_file = r"C:\Users\yvenl\OneDrive\Bureau\GameDevAssists\Notebooks\data\games.json"
+def stop_scraping(stop_flag):
+    stop_flag["stop"] = True
+    print("Arrêt demandé. Le scraping va s’interrompre...")
 
+def monitor_input(stop_flag):
+    input("Appuyez sur Entrée pour arrêter le scraping à tout moment...\n")
+    stop_scraping(stop_flag)
+
+# Chargement des données existantes
 if os.path.exists(json_file):
     with open(json_file, "r", encoding="utf-8") as f:
         reviews_data = json.load(f)
@@ -200,11 +196,10 @@ def scraping_generator(game_name, stop_flag):
                 break
             last_height = new_height
 
-            yield total_extracted  # renvoie l'état d'extraction
+            yield total_extracted
 
     finally:
         driver.quit()
-
 
 if __name__ == "__main__":
     import sys
@@ -215,7 +210,13 @@ if __name__ == "__main__":
         game_name = input("Veuillez entrer le nom du jeu : ")
 
     stop_flag = {"stop": False}
+    monitor_thread = threading.Thread(target=monitor_input, args=(stop_flag,))
+    monitor_thread.start()
+
     for count in scraping_generator(game_name, stop_flag):
         print(f"Avis extraits : {count}")
+        if stop_flag["stop"]:
+            print("Scraping arrêté par l'utilisateur.")
+            break
 
-
+    monitor_thread.join()
