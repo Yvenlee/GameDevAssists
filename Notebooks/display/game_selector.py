@@ -121,8 +121,7 @@ def search_bar(game_names):
         st.session_state['search'] = ''
         st.session_state['clear_search'] = False
 
-    # === 1. Barre de recherche ===
-    col1, col2, col3 = st.columns([9, 1, 1])
+    col1, col2, col3 = st.columns([9,1,1])
     with col1:
         search = st.text_input(
             label="",
@@ -157,38 +156,44 @@ def search_bar(game_names):
                 output_path = clean_games_data()
                 st.session_state['search_result'] = ('success', f"Optimisation terminée. Vous pouvez désormais accéder à la partie Dashboard du jeu de votre choix.")
 
-    # === 2. Scraping si le jeu est introuvable ===
+    # === Partie scraping avec bouton Annuler ===
     if st.session_state.get('missing_game'):
         game_to_scrape = st.session_state['missing_game']
-        st.session_state['scrape_prompt'] = f"💡 Le jeu **{game_to_scrape}** n'existe pas dans la base. Voulez-vous le scraper ?"
+        st.info(f"💡 Le jeu **{game_to_scrape}** n'existe pas dans la base. Voulez-vous le scraper ?")
 
         col_scrape, col_cancel = st.columns([2, 1])
         with col_scrape:
-            if st.button("🔄 Lancer le scraping", key="scrape_button"):
-                with st.spinner("🔄 Scraping en cours..."):
-                    try:
-                        result = subprocess.run(
-                            ["python", "../Notebooks/scraping/scrapingfusion.py", game_to_scrape],
-                            check=True,
-                            capture_output=True,
-                            text=True
-                        )
-                        st.session_state['clear_search'] = True
-                        st.session_state['game_added'] = game_to_scrape
-                        del st.session_state['missing_game']
-                        st.rerun()
-                    except subprocess.CalledProcessError as e:
-                        st.session_state['search_result'] = ('error', "❌ Échec du scraping.")
-                        st.session_state['scraping_error'] = e.stderr
-                        del st.session_state['missing_game']
-                        st.rerun()
+            if (not st.session_state.get('scrape_process')) or (st.session_state.scrape_process.poll() is not None):
+                # Pas de process en cours → bouton lancer scraping
+                if st.button("🔄 Lancer le scraping", key="scrape_button"):
+                    # Lance le scraping en Popen
+                    proc = subprocess.Popen(
+                        ["python", "../Notebooks/scraping/scrapingfusion.py", game_to_scrape],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True
+                    )
+                    st.session_state.scrape_process = proc
+                    st.session_state['search_result'] = ('info', "🔄 Scraping lancé...")
+
+            else:
+                # Process en cours → affiche info + bouton annuler
+                st.info("🔄 Scraping en cours...")
 
         with col_cancel:
-            if st.button("❌ Ne rien faire", key="cancel_scrape"):
-                st.session_state['search_result'] = ('info', "Scraping annulé.")
-                del st.session_state['missing_game']
+            if st.session_state.get('scrape_process') and st.session_state.scrape_process.poll() is None:
+                if st.button("❌ Annuler le scraping", key="cancel_scrape"):
+                    proc = st.session_state.scrape_process
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                    st.session_state.scrape_process = None
+                    st.session_state['search_result'] = ('warning', "❌ Scraping annulé.")
+                    del st.session_state['missing_game']
 
-    # === 3. Affichage centralisé des messages ===
+    # === Affichage messages ===
     st.markdown("<hr style='margin-top:0;margin-bottom:10px;border:1px solid #444;'/>", unsafe_allow_html=True)
 
     if st.session_state.get('search_result'):
@@ -202,10 +207,6 @@ def search_bar(game_names):
         elif msg_type == 'info':
             st.info(msg)
         del st.session_state['search_result']
-
-    if st.session_state.get('scrape_prompt'):
-        st.info(st.session_state['scrape_prompt'])
-        del st.session_state['scrape_prompt']
 
     if st.session_state.get('scraping_error'):
         st.text(st.session_state['scraping_error'])
