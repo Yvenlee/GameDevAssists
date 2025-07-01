@@ -1,6 +1,12 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from wordcloud import WordCloud, STOPWORDS
+import matplotlib.pyplot as plt
+import string
+import numpy as np
+from matplotlib.colors import LinearSegmentedColormap
+from collections import Counter
 
 def display_dashboard(data, game_name):
     df = pd.DataFrame(data)
@@ -41,7 +47,6 @@ def display_dashboard(data, game_name):
         }
     )
 
-    # Histogramme heures jouées
     fig2 = px.histogram(
         df.dropna(subset=["Hours Played"]),
         x="Hours Played",
@@ -51,7 +56,6 @@ def display_dashboard(data, game_name):
         color_discrete_sequence=["#FFD700"]
     )
 
-    # Barres empilées (avis par tranche d'heures)
     df_binned = df.dropna(subset=["Hours Played", "Recommended"]).copy()
     df_binned["Tranche d'heures"] = pd.cut(
         df_binned["Hours Played"],
@@ -78,7 +82,6 @@ def display_dashboard(data, game_name):
     )
     fig3.update_layout(barmode="stack", yaxis=dict(ticksuffix="%"))
 
-    # Boxplot (sans outliers)
     box_df = df.dropna(subset=["Hours Played", "Recommended"])
     Q1 = box_df["Hours Played"].quantile(0.25)
     Q3 = box_df["Hours Played"].quantile(0.75)
@@ -94,7 +97,6 @@ def display_dashboard(data, game_name):
         labels={"Recommended Label": "Recommandation", "Hours Played": "Heures jouées"}
     )
 
-    # Ligne évolution médiane
     df_time_hours = df.dropna(subset=["Date Posted", "Hours Played"]).copy()
     df_time_hours["Mois"] = df_time_hours["Date Posted"].dt.to_period("M").dt.to_timestamp()
     median_per_month = df_time_hours.groupby("Mois")["Hours Played"].median().reset_index()
@@ -109,7 +111,6 @@ def display_dashboard(data, game_name):
         color_discrete_sequence=["#925dc4"]
     )
 
-        # Tendance des avis au fil du temps
     df_time_rec = df.dropna(subset=["Date Posted", "Recommended"]).copy()
     df_time_rec["Mois"] = df_time_rec["Date Posted"].dt.to_period("M").dt.to_timestamp()
     df_time_rec["Type d'avis"] = df_time_rec["Recommended"].map({1: "Positif", 0: "Négatif"})
@@ -126,9 +127,6 @@ def display_dashboard(data, game_name):
         color_discrete_map={"Positif": "#2ca02c", "Négatif": "#d62728"}
     )
 
-    
-
-    # Affichage en colonnes
     col1, col2 = st.columns(2)
     with col1:
         st.plotly_chart(fig1, use_container_width=True)
@@ -137,7 +135,73 @@ def display_dashboard(data, game_name):
         st.plotly_chart(fig2, use_container_width=True)
         st.plotly_chart(fig4, use_container_width=True)
 
-    # Ligne en bas
     st.plotly_chart(fig6, use_container_width=True)
     st.plotly_chart(fig7, use_container_width=True)
 
+    # Nuage de mots dynamique par année
+    st.markdown("### Nuage de mots basé sur les commentaires (filtrable par année)")
+
+    # Sélection de l’année
+    df["Année"] = df["Date Posted"].dt.year
+    années_disponibles = sorted(df["Année"].dropna().unique().astype(int), reverse=True)
+    col_text, col_cloud = st.columns([1, 2])
+
+    with col_text:
+        annee_selectionnee = st.selectbox("Choisir une année :", années_disponibles)
+
+    df_annee = df[df["Année"] == annee_selectionnee]
+    comments = df_annee["Comment"].dropna().astype(str)
+
+    custom_stopwords = set(STOPWORDS)
+    custom_stopwords.update([
+        game_name.lower(), "je", "tu", "il", "elle", "nous", "vous", "ils", "elles",
+        "le", "la", "les", "un", "une", "des", "du", "de", "d", "ce", "cette", "ces",
+        "et", "ou", "où", "mais", "donc", "or", "ni", "car", "à", "en", "dans", "sur",
+        "par", "pour", "avec", "sans", "sous", "comme", "que", "qui", "quoi", "dont",
+        "au", "aux", "ça", "cela", "encore", "bien", "bon", "jeu", "jeux", "game",
+        "games", "played", "playing", "play", "also", "really", "i", "you", "he", "she",
+        "his", "her", "its", "your", "my", "our", "it", "we", "they", "me", "him", "us",
+        "them", "mine", "yours", "hers", "ours", "theirs", "est", "pas", "plus", "tout",
+        "trop", "très", "mal", "bon", "aussi", "quelque", "quelques", "cest", "c'est",
+        "cette", "ces", "ceux", "celle", "celui", "cela", "ceci", "ce", "ces", "cet",
+        "jai", "tu as", "il a", "elle a", "nous avons", "vous avez", "ils ont",
+        "elles ont", "j'ai", "tu as", "il a", "elle a", "nous avons", "vous avez", "ils ont", "elles ont",
+    ])
+
+    translator = str.maketrans('', '', string.punctuation + string.digits)
+    words = [
+        word.lower().translate(translator)
+        for text in comments
+        for word in text.split()
+        if len(word) > 2 and word.lower().translate(translator) not in custom_stopwords
+    ]
+    cleaned_text = " ".join(words)
+    word_freq = Counter(words)
+    top_words = word_freq.most_common(5)
+
+    with col_text:
+        st.subheader(f"Top 5 mots ({annee_selectionnee})")
+        for word, freq in top_words:
+            st.metric(label=f"Mot : {word}", value=f"{freq} occurrences")
+
+    with col_cloud:
+        rainbow_cmap = LinearSegmentedColormap.from_list(
+            "custom_rainbow",
+            ["#9c0000", "#008cff", "#00790A", "#9c8500", "#e27900", "#602c85", "#a939ff"]
+        )
+        wordcloud = WordCloud(
+            width=1000,
+            height=500,
+            background_color="#1e1e2f",
+            max_words=150,
+            stopwords=custom_stopwords,
+            colormap=rainbow_cmap,
+            collocations=False,
+            prefer_horizontal=0.85,
+            random_state=42
+        ).generate(cleaned_text)
+
+        fig_wc, ax = plt.subplots(figsize=(10, 5))
+        ax.imshow(wordcloud, interpolation='bilinear')
+        ax.axis("off")
+        st.pyplot(fig_wc)

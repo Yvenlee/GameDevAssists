@@ -182,7 +182,7 @@ def scraping_generator(game_name, stop_flag):
         click_browse_reviews(driver)
 
         total_extracted = 0
-        count_limit = 1500
+        count_limit = 5000
         last_height = driver.execute_script("return document.body.scrollHeight")
 
         while total_extracted < count_limit and not stop_flag["stop"]:

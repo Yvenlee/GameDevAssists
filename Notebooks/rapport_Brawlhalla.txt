@@ -1,0 +1,23 @@
+### Points Positifs
+1. **Accessibilité et Amusement Casuel** : Brawlhalla semble être un jeu facile à prendre en main et amusant pour les joueurs occasionnels. Le premier avis mentionne que la majorité des joueurs restent à un niveau basique et casual, ce qui montre que le jeu est accessible et divertissant pour une large audience.
+2. **Addictivité** : Le cinquième avis souligne que malgré la frustration, les joueurs continuent à jouer, ce qui indique que le jeu a un fort potentiel addictif.
+
+### Points Négatifs
+1. **Méta Passive** : Le premier avis met en lumière un problème de méta passive, où les joueurs adoptent une stratégie de "passive float" qui peut devenir frustrante, surtout à des niveaux de compétence plus élevés comme le haut platine ou le bas diamant.
+2. **Équilibre des Armes** : Le quatrième avis soulève un problème d'équilibre des armes, où lancer une arme peut être plus efficace que l'utiliser directement. Cela peut rendre certaines armes moins attrayantes ou frustrantes à utiliser.
+3. **Frustration Générale** : Plusieurs avis expriment une frustration générale avec le jeu, allant de la méta passive à des problèmes d'équilibre des armes, ce qui peut affecter l'expérience de jeu.
+
+### Idées pour Corriger les Défauts
+1. **Rééquilibrage de la Méta Passive** :
+   - **Ajustements des Mécaniques de Flottement** : Réduire l'efficacité du "passive float" en ajustant les mécaniques de flottement pour encourager des styles de jeu plus agressifs.
+   - **Récompenses pour l'Agressivité** : Introduire des mécaniques ou des bonus qui récompensent les joueurs pour adopter un style de jeu plus agressif, comme des bonus de dégâts pour les attaques rapprochées.
+
+2. **Rééquilibrage des Armes** :
+   - **Revoir les Statistiques des Armes** : Réévaluer les statistiques des armes pour s'assurer que l'utilisation directe des armes est aussi efficace, sinon plus, que de les lancer.
+   - **Ajouter des Variations d'Armes** : Introduire des variations ou des évolutions d'armes qui encouragent leur utilisation directe plutôt que de les lancer.
+
+3. **Amélioration de l'Expérience de Jeu** :
+   - **Système de Tutoriel Avancé** : Introduire des tutoriels avancés qui enseignent aux joueurs des stratégies pour contrer les méta passives et améliorer leurs compétences globales.
+   - **Modes de Jeu Diversifiés** : Ajouter des modes de jeu qui encouragent des styles de jeu variés, réduisant ainsi la monotonie et la frustration liée à la méta passive.
+
+En résumé, Brawlhalla est un jeu accessible et addictif, mais il souffre de problèmes de méta passive et d'équilibre des armes qui peuvent frustrer les joueurs. Des ajustements dans les mécaniques de jeu, l'équilibre des armes et l'ajout de divers modes de jeu pourraient améliorer l'expérience globale et réduire la frustration des joueurs.

@@ -97,7 +97,7 @@ if "selected_game" in st.session_state:
                 open(fname,"w",encoding="utf-8").write(result)
                 st.download_button("📥 Télécharger le rapport (.txt)", data=result, file_name=fname, mime="text/plain")
                 with st.expander("✉️ Envoyer un email avec ou sans pièce jointe"):
-                    dest = st.text_input("✉️ Adresse email", "harrisonndiba338@gmail.com")
+                    dest = st.text_input("✉️ Adresse email", "equipedevsteam@gmail.com")
                     subj = st.text_input("📝 Sujet", f"Rapport d'analyse - {selected}")
                     body = st.text_area("📄 Contenu", f"Bonjour,\n\nVeuillez trouver ci-joint le rapport d'analyse du jeu « {selected} ».\nCordialement.",height=150)
                     upload = st.file_uploader("📎 Fichier à joindre", type=["txt","pdf","csv","docx"])
@@ -119,3 +119,32 @@ if st.session_state.get("selected_game") and st.session_state.selected_game in c
     display_dashboard(cleaned_data[st.session_state.selected_game], st.session_state.selected_game)
 else:
     st.info("Veuillez sélectionner un jeu pour afficher les statistiques.")
+
+with st.expander("A Propos de cette application", expanded=False):
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #1f2937, #374151);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+        color: #e0e7ff;
+        font-family: 'Courier New', Courier, monospace;
+        line-height: 1.6;
+        border: 1px solid #3b82f6;
+    ">
+    <strong>Cette application vous permet de rechercher des jeux Steam et d'analyser les avis des utilisateurs grâce à un processus de scraping en temps réel.</strong>
+    <br><br>
+    <u>Fonctionnalités principales :</u>
+    <ul>
+        <li>Recherche et sélection de jeux via une barre de recherche ou une grille de jeux.</li>
+        <li>Scraping des avis utilisateurs en direct si le jeu n’est pas présent en local.</li>
+        <li>Affichage des avis collectés avec possibilité d'analyser les sentiments.</li>
+        <li>Génération et téléchargement d'un rapport d'analyse.</li>
+        <li>Envoi d'e-mails avec ou sans pièce jointe contenant le rapport.</li>
+        <li>Visualisation des statistiques détaillées via un dashboard.</li>
+    </ul>
+    <u>Développeurs :</u><br>
+    - Yvenlee<br>
+    - Harrison Ndiba<br>
+    </div>
+    """, unsafe_allow_html=True)
