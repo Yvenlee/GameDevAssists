@@ -84,7 +84,7 @@ def search_bar(game_names):
                     with st.spinner("🔄 Scraping en cours..."):
                         try:
                             result = subprocess.run(
-                                ["python", r"C:\Users\yvenl\OneDrive\Bureau\GameDevAssists\Notebooks\scraping\scrapingfusion.py", search],
+                                ["python", "../Notebooks/scraping/scrapingfusion.py", search],
                                 check=True,
                                 capture_output=True,
                                 text=True
