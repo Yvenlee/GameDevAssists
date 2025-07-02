@@ -7,6 +7,24 @@ import string
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 from collections import Counter
+import re
+import difflib
+
+def get_similar_to_game_name(game_name, comments, cutoff=0.75):
+    game_tokens = re.findall(r"\w+", game_name.lower())
+    game_joined = ''.join(game_tokens)
+
+    all_words = set()
+    for text in comments:
+        tokens = re.findall(r"\w+", text.lower())
+        all_words.update(tokens)
+
+    similar_words = set()
+    for word in all_words:
+        ratio = difflib.SequenceMatcher(None, word, game_joined).ratio()
+        if ratio >= cutoff:
+            similar_words.add(word)
+    return similar_words
 
 def display_dashboard(data, game_name):
     df = pd.DataFrame(data)
@@ -152,21 +170,62 @@ def display_dashboard(data, game_name):
     df_annee = df[df["Année"] == annee_selectionnee]
     comments = df_annee["Comment"].dropna().astype(str)
 
+    similar_words = get_similar_to_game_name(game_name, comments, cutoff=0.5)
+
     custom_stopwords = set(STOPWORDS)
+    custom_stopwords.update(similar_words)
     custom_stopwords.update([
-        game_name.lower(), "je", "tu", "il", "elle", "nous", "vous", "ils", "elles",
-        "le", "la", "les", "un", "une", "des", "du", "de", "d", "ce", "cette", "ces",
-        "et", "ou", "où", "mais", "donc", "or", "ni", "car", "à", "en", "dans", "sur",
-        "par", "pour", "avec", "sans", "sous", "comme", "que", "qui", "quoi", "dont",
-        "au", "aux", "ça", "cela", "encore", "bien", "bon", "jeu", "jeux", "game",
-        "games", "played", "playing", "play", "also", "really", "i", "you", "he", "she",
-        "his", "her", "its", "your", "my", "our", "it", "we", "they", "me", "him", "us",
-        "them", "mine", "yours", "hers", "ours", "theirs", "est", "pas", "plus", "tout",
-        "trop", "très", "mal", "bon", "aussi", "quelque", "quelques", "cest", "c'est",
-        "cette", "ces", "ceux", "celle", "celui", "cela", "ceci", "ce", "ces", "cet",
-        "jai", "tu as", "il a", "elle a", "nous avons", "vous avez", "ils ont",
-        "elles ont", "j'ai", "tu as", "il a", "elle a", "nous avons", "vous avez", "ils ont", "elles ont",
+        game_name.lower(),
+
+        # Pronoms personnels français
+        "je", "j'", "jai", "j'ai", "tu", "il", "elle", "on", "nous", "vous", "ils", "elles", "pas", "jeu"
+        
+        # Pronoms personnels anglais
+        "i", "i'm", "im", "i am", "you", "u", "ur", "your", "you're", "youre", "he", "she", "we", "they", "me", "him", "her", "us", "them",
+        "mine", "yours", "his", "hers", "ours", "theirs", "my", "our", "their", "its", "it's", "it is", "it",
+
+        # Déterminants/articles français
+        "le", "la", "les", "l", "un", "une", "des", "du", "de", "d", "ce", "cet", "cette", "ces", "mon", "ton", "son", "notre", "votre", "leur",
+        
+        # Déterminants/articles anglais
+        "a", "an", "the",
+
+        # Mots de liaison / prépositions / auxiliaires français
+        "et", "ou", "où", "mais", "donc", "or", "ni", "car", "à", "en", "dans", "sur", "sous", "par", "pour", "avec", "sans", "comme",
+        "que", "qui", "quoi", "dont", "au", "aux", "ceci", "cela", "ça", "c'", "cest", "c'est", "y", "là", "si", "se", "sa", "ses", "leurs",
+
+        # Conjonctions / auxiliaires anglais
+        "and", "or", "but", "so", "because", "if", "when", "then", "that", "which", "who", "whom", "whose", "what", "how", "this", "these", "those", "there", "here", "where", "while", "to", "of", "on", "in", "at", "by", "from", "with", "about", "into", "over", "under", "before", "after", "between", "during", "without", "again", "still",
+
+        # Verbes avoir/être français
+        "ai", "as", "a", "avons", "avez", "ont", "avais", "avait", "avions", "aviez", "avaient",
+        "suis", "es", "est", "sommes", "êtes", "sont", "étais", "était", "étions", "étiez", "étaient",
+
+        # Verbes être/avoir anglais
+        "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having",
+
+        # Contractions anglaises courantes
+        "i've", "ive", "i'd", "id", "i'll", "ill", "you're", "youre", "you'll", "youve", "you'd", "youll",
+        "he's", "hes", "he'll", "he'd", "she's", "shes", "she'll", "she'd", "we're", "were", "we've", "weve", "we'll", "we'd",
+        "they're", "theyre", "they've", "theyve", "they'll", "they'd", "it's", "its", "it'll", "it'd", "that's", "thats", "there's", "theres",
+
+        # Mots passe-partout inutiles
+        "yes", "no", "ok", "okay", "lol", "lmao", "rofl", "haha", "mdr", "ptdr", "omg", "wtf", "bro", "dude", "man", "yo", "hey", "hi",
+        "sorry", "welcome", "gg", "wp", "ez", "hard", "easy", "nice", "cool", "great", "awesome", "fun",
+
+        # Mots liés au jeu (souvent présents)
+        "game", "games", "gaming", "play", "played", "playing", "plays", "player", "players", "match", "matches", "round", "team", "teams",
+        "win", "won", "lose", "lost", "victory", "defeat", "fight", "fighting", "killed", "kill", "kills", "death", "deaths", "jeux", "jeu",
+        # Qualificatifs passe-partout
+        "good", "bad", "better", "best", "worst", "amazing", "awful", "real", "really", "very", "too", "much", "many", "more", "most", "less",
+        "few", "some", "same", "such", "other", "another", "each", "every", "all", "none", "nothing", "something", "anything", "everything",
+
+        # Fausses itérations de mots fréquents
+        "j", "j'ai", "jai", "im", "i'm", "ive", "i've", "id", "i'd", "ill", "i'll", "youre", "you're", "u", "ur", "c", "c'est", "cest", "dont", "didnt", "didn't", "wasnt", "wasn't", "isnt", "isn't", "cant", "can't",
+        "couldnt", "couldn't", "wouldnt", "wouldn't", "shouldnt", "shouldn't", "wont", "won't", "dont", "don't", "doesnt", "doesn't",
     ])
+
+
 
     translator = str.maketrans('', '', string.punctuation + string.digits)
     words = [

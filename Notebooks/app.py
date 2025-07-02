@@ -23,6 +23,10 @@ games_data = load_games_data()
 cleaned_data = load_cleaned_data()
 game_names = list(games_data.keys())
 
+# Initialisation switch DB
+if "use_cleaned_data" not in st.session_state:
+    st.session_state.use_cleaned_data = False
+
 st.markdown("<h1 style='text-align: center; color: white;'>Mistral Vision Steam</h1>", unsafe_allow_html=True)
 search_bar(game_names) or render_game_grid(game_names, game_logos)
 
@@ -30,7 +34,19 @@ if "selected_game" in st.session_state:
     selected = st.session_state.selected_game
     st.markdown(f"## Jeu sélectionné : **{selected}**")
 
-    # Initialisation état scraping dans session_state
+    # Bouton de switch base de données
+    if st.button("🔁 Switch base de données"):
+        st.session_state.use_cleaned_data = not st.session_state.use_cleaned_data
+
+    # Affichage de l'état actuel
+    if st.session_state.use_cleaned_data:
+        st.success("✅ Base de données **nettoyée** affichée.")
+        raw = cleaned_data.get(selected, games_data[selected])
+    else:
+        st.info("📦 Base de données **brute** affichée.")
+        raw = games_data[selected]
+
+    # Initialisation état scraping
     if "scraping_thread" not in st.session_state:
         st.session_state.scraping_thread = None
     if "stop_flag" not in st.session_state:
@@ -74,43 +90,50 @@ if "selected_game" in st.session_state:
         
         st.stop()
 
-    raw = games_data[selected]
-    df = pd.DataFrame(raw)[["Recommended","Hours Played","Date Posted","Comment"]]
-    st.markdown("Base de données des avis collectés")
-    st.dataframe(df, use_container_width=True, height=350)
+    # Affichage dataframe
+    df = pd.DataFrame(raw)
+    expected_cols = ["Recommended", "Hours Played", "Date Posted", "Comment"]
+    available_cols = [col for col in expected_cols if col in df.columns]
+    df = df[available_cols]
     
-    comments = [r["Comment"].strip() for r in raw if r["Comment"].strip()]
+    st.markdown("### 💬 Base de données des avis collectés")
+    st.dataframe(df, use_container_width=True, height=350)
+
+    # Commentaires
+    comments = [r["Comment"].strip() for r in raw if isinstance(r.get("Comment", ""), str) and r["Comment"].strip()]
     st.markdown(f"""<div style="border-left:4px solid #1a7fdd;padding-left:10px;margin-bottom:20px;">
         <div style="font-size:14px;color:#aaa;">Nombre d'avis disponibles</div>
         <div style="font-size:24px;color:#1a7fdd;font-weight:bold;">{len(comments)}</div>
     </div>""", unsafe_allow_html=True)
-    
+
+    # Analyse sentiments
     if comments:
         nmax = len(comments)
-        sel = st.number_input("Nombre d'avis à analyser :",1,nmax,value=min(5,nmax))
-        n = st.slider("Ajustez le nombre d'avis :",1,nmax, sel)
+        sel = st.number_input("Nombre d'avis à analyser :", 1, nmax, value=min(5, nmax))
+        n = st.slider("Ajustez le nombre d'avis :", 1, nmax, sel)
         if st.button("Lancer l'analyse des sentiments"):
             with st.spinner("Génération du rapport en cours..."):
                 result = analyze_comments(comments[:n], selected)
                 st.subheader("Rapport généré")
                 fname = f"rapport_{selected.replace(' ','_')}.txt"
-                open(fname,"w",encoding="utf-8").write(result)
+                open(fname, "w", encoding="utf-8").write(result)
                 st.download_button("📥 Télécharger le rapport (.txt)", data=result, file_name=fname, mime="text/plain")
                 with st.expander("✉️ Envoyer un email avec ou sans pièce jointe"):
                     dest = st.text_input("✉️ Adresse email", "equipedevsteam@gmail.com")
                     subj = st.text_input("📝 Sujet", f"Rapport d'analyse - {selected}")
-                    body = st.text_area("📄 Contenu", f"Bonjour,\n\nVeuillez trouver ci-joint le rapport d'analyse du jeu « {selected} ».\nCordialement.",height=150)
-                    upload = st.file_uploader("📎 Fichier à joindre", type=["txt","pdf","csv","docx"])
+                    body = st.text_area("📄 Contenu", f"Bonjour,\n\nVeuillez trouver ci-joint le rapport d'analyse du jeu « {selected} ».\nCordialement.", height=150)
+                    upload = st.file_uploader("📎 Fichier à joindre", type=["txt", "pdf", "csv", "docx"])
                     use_gen = st.checkbox("📌 Utiliser rapport généré", value=True)
                     if st.button("📨 Envoyer l'e-mail"):
                         if not dest or not subj or not body:
                             st.warning("Merci de remplir tous les champs obligatoires.")
                         else:
-                            file_obj = upload if upload else (open(fname,"rb") if use_gen else None)
+                            file_obj = upload if upload else (open(fname, "rb") if use_gen else None)
                             with st.spinner("Envoi en cours..."):
-                                ok,msg = envoyer_email(dest, subj, body, file_obj)
-                                st.success("✅ "+msg) if ok else st.error("❌ "+msg)
-                                if file_obj and not upload: file_obj.close()
+                                ok, msg = envoyer_email(dest, subj, body, file_obj)
+                                st.success("✅ " + msg) if ok else st.error("❌ " + msg)
+                                if file_obj and not upload:
+                                    file_obj.close()
     else:
         st.warning("Aucun commentaire disponible pour ce jeu.")
 
@@ -144,7 +167,7 @@ with st.expander("A Propos de cette application", expanded=False):
         <li>Visualisation des statistiques détaillées via un dashboard.</li>
     </ul>
     <u>Développeurs :</u><br>
-    - Yvenlee<br>
+    - Yvenlee Vonin-Kabel<br>
     - Harrison Ndiba<br>
     </div>
     """, unsafe_allow_html=True)
